@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="可解释知识图谱补全与审核工作台低保真交互原型">
+  <title>KG 审核工作台 · 低保真原型</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d2939'/%3E%3Ccircle cx='9' cy='16' r='3' fill='%23fff'/%3E%3Ccircle cx='23' cy='9' r='3' fill='%23fff'/%3E%3Ccircle cx='23' cy='23' r='3' fill='%23fff'/%3E%3Cpath d='M12 15l8-5M12 17l8 5' stroke='%237f9cf5' stroke-width='2'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #182230;
+      --muted: #667085;
+      --soft: #f2f4f7;
+      --line: #d0d5dd;
+      --paper: #ffffff;
+      --canvas: #f7f8fa;
+      --accent: #3448c5;
+      --accent-soft: #eef0ff;
+      --good: #087a55;
+      --good-soft: #e8f7f1;
+      --warn: #a15c00;
+      --warn-soft: #fff5e5;
+      --bad: #b42318;
+      --bad-soft: #fff0ee;
+      --shadow: 0 8px 28px rgba(16, 24, 40, .08);
+    }
+    * { box-sizing: border-box; }
+    html { font-size: 16px; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: Inter, "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+      line-height: 1.5;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(52, 72, 197, .23);
+      outline-offset: 2px;
+    }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 244px minmax(0, 1fr); }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh;
+      padding: 24px 18px; background: #192230; color: #fff;
+      display: flex; flex-direction: column; gap: 26px;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 760; letter-spacing: .01em; }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; background: #28364a; border: 1px solid #526077; border-radius: 9px; }
+    .brand-mark svg { width: 24px; height: 24px; }
+    .prototype-tag { margin-left: auto; padding: 3px 7px; border: 1px solid #5c6a80; border-radius: 999px; color: #cbd2dc; font-size: .72rem; font-weight: 600; }
+    .nav { display: grid; gap: 7px; }
+    .nav button {
+      width: 100%; border: 0; background: transparent; color: #cbd2dc;
+      padding: 11px 12px; border-radius: 8px; text-align: left; display: flex; gap: 10px; align-items: center;
+    }
+    .nav button:hover { background: #252f3e; color: #fff; }
+    .nav button.active { color: #fff; background: #344054; box-shadow: inset 3px 0 0 #93a3ff; }
+    .nav .dot { width: 8px; height: 8px; border: 1.5px solid currentColor; border-radius: 2px; }
+    .sidebar-note { margin-top: auto; padding: 13px; border: 1px dashed #526077; border-radius: 9px; color: #b9c2cf; font-size: .8rem; }
+    .main { min-width: 0; }
+    .topbar {
+      height: 66px; padding: 0 30px; background: var(--paper); border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar strong { font-size: 1rem; }
+    .top-actions { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: .86rem; }
+    .avatar { width: 31px; height: 31px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--ink); font-weight: 700; }
+    main { padding: 28px 30px 48px; max-width: 1520px; margin: 0 auto; }
+    .view { display: none; }
+    .view.active { display: block; animation: enter .18s ease-out; }
+    @keyframes enter { from { opacity: .25; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+    .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+    h1 { margin: 0 0 6px; font-size: 1.6rem; line-height: 1.25; letter-spacing: -.02em; }
+    h2 { margin: 0; font-size: 1.05rem; }
+    h3 { margin: 0 0 10px; font-size: .94rem; }
+    p { margin: 0; }
+    .subtext { color: var(--muted); font-size: .9rem; }
+    .btn {
+      min-height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px;
+      background: var(--paper); color: var(--ink); font-weight: 650;
+    }
+    .btn:hover { border-color: #98a2b3; background: #fafafa; }
+    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn.primary:hover { background: #293bab; }
+    .btn.danger { color: var(--bad); border-color: #f2b8b5; background: var(--bad-soft); }
+    .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+    .btn.small { min-height: 34px; padding: 6px 10px; font-size: .85rem; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .card { background: var(--paper); border: 1px solid var(--line); border-radius: 11px; box-shadow: 0 1px 2px rgba(16,24,40,.03); }
+    .card-head { padding: 17px 19px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+    .card-body { padding: 19px; }
+    .stepper { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px; }
+    .step { border-top: 3px solid var(--line); padding-top: 8px; color: var(--muted); font-size: .82rem; }
+    .step.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+    .dropzone { border: 1.5px dashed #98a2b3; background: #fbfcfd; border-radius: 9px; padding: 38px 20px; text-align: center; }
+    .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+    .upload-icon { width: 42px; height: 42px; margin: 0 auto 12px; border: 1px solid var(--line); border-radius: 9px; display: grid; place-items: center; background: #fff; font-size: 1.2rem; }
+    .file-name { margin-top: 8px; color: var(--accent); font-size: .86rem; font-weight: 650; }
+    .field-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    label { display: grid; gap: 6px; color: #344054; font-size: .84rem; font-weight: 650; }
+    input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 9px 10px; background: #fff; color: var(--ink); }
+    textarea { min-height: 72px; resize: vertical; }
+    .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+    .notice { display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; font-size: .86rem; }
+    .notice.good { background: var(--good-soft); color: #075a40; border: 1px solid #b7e3d2; }
+    .notice.warn { background: var(--warn-soft); color: #774300; border: 1px solid #f0d4a5; }
+    .notice.bad { background: var(--bad-soft); color: #8d1d14; border: 1px solid #f2b8b5; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .stat { padding: 16px; border: 1px solid var(--line); background: #fff; border-radius: 9px; }
+    .stat .value { font-size: 1.45rem; font-weight: 760; margin-top: 5px; }
+    .stat .label { color: var(--muted); font-size: .8rem; }
+    .toolbar { display: flex; gap: 9px; flex-wrap: wrap; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+    .toolbar input { width: 240px; }
+    .toolbar select { width: auto; min-width: 130px; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid #e4e7ec; vertical-align: middle; }
+    th { background: #f9fafb; color: var(--muted); font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; }
+    tr:last-child td { border-bottom: 0; }
+    .status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; font-size: .77rem; font-weight: 700; white-space: nowrap; }
+    .status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status.done, .status.accepted { background: var(--good-soft); color: var(--good); }
+    .status.running, .status.pending { background: var(--accent-soft); color: var(--accent); }
+    .status.failed, .status.rejected { background: var(--bad-soft); color: var(--bad); }
+    .status.deferred { background: var(--warn-soft); color: var(--warn); }
+    .progress { height: 7px; background: #eaecf0; border-radius: 99px; overflow: hidden; width: 120px; }
+    .progress span { height: 100%; display: block; background: var(--accent); border-radius: inherit; }
+    .form-card { max-width: 760px; }
+    .form-stack { display: grid; gap: 18px; }
+    .radio-card { display: flex; gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 13px; font-weight: 500; }
+    .radio-card input { width: auto; }
+    .summary-box { background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 13px; font-size: .86rem; display: flex; gap: 22px; flex-wrap: wrap; }
+    .review-shell { display: grid; grid-template-columns: minmax(330px, 38%) minmax(0, 62%); min-height: 680px; overflow: hidden; }
+    .candidate-pane { border-right: 1px solid var(--line); min-width: 0; }
+    .candidate-list { max-height: 596px; overflow: auto; }
+    .candidate-item { width: 100%; border: 0; border-bottom: 1px solid #e4e7ec; background: #fff; text-align: left; padding: 14px 16px; }
+    .candidate-item:hover { background: #f9fafb; }
+    .candidate-item.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+    .candidate-triplet { font-weight: 700; margin-bottom: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .candidate-meta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; }
+    .score { font-variant-numeric: tabular-nums; font-weight: 760; color: var(--accent); }
+    .review-pane { padding: 22px 24px; min-width: 0; }
+    .review-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+    .triplet { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+    .entity, .relation { padding: 8px 11px; border-radius: 7px; border: 1px solid var(--line); background: #fff; font-weight: 700; }
+    .relation { background: #f2f4f7; color: #475467; font-size: .86rem; }
+    .score-box { min-width: 132px; padding: 12px; border: 1px solid #c7cdf7; border-radius: 9px; background: var(--accent-soft); }
+    .score-box .big { color: var(--accent); font-weight: 800; font-size: 1.45rem; }
+    .explain-note { margin: 15px 0; padding: 10px 12px; background: #f8f9fb; border-left: 3px solid #98a2b3; color: var(--muted); font-size: .82rem; }
+    .path-list { display: grid; gap: 10px; }
+    .path-card { border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; }
+    .path-main { width: 100%; border: 0; background: transparent; padding: 12px 13px; text-align: left; display: flex; justify-content: space-between; gap: 12px; }
+    .path-main:hover { background: #f9fafb; }
+    .path-line { font-weight: 650; }
+    .path-detail { display: none; padding: 0 13px 12px; color: var(--muted); font-size: .8rem; }
+    .path-card.open .path-detail { display: block; }
+    .empty-path { border: 1px dashed var(--line); border-radius: 9px; padding: 28px; text-align: center; color: var(--muted); background: #fbfcfd; }
+    .review-form { margin-top: 18px; }
+    .decision-bar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; align-items: center; }
+    .reject-wrap { position: relative; }
+    .reject-menu { display: none; position: absolute; bottom: 46px; right: 0; width: 210px; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow); z-index: 3; }
+    .reject-menu.open { display: grid; }
+    .reject-menu button { border: 0; background: transparent; text-align: left; padding: 8px; border-radius: 6px; }
+    .reject-menu button:hover { background: var(--bad-soft); color: var(--bad); }
+    .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(30px); opacity: 0; pointer-events: none; background: #182230; color: #fff; padding: 11px 14px; border-radius: 8px; box-shadow: var(--shadow); z-index: 20; transition: .2s; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+    .toast button { margin-left: 14px; border: 0; background: transparent; color: #b8c3ff; font-weight: 700; }
+    .result-stats .stat { cursor: pointer; }
+    .result-stats .stat.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(52,72,197,.1); }
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(16,24,40,.42); place-items: center; z-index: 30; padding: 20px; }
+    .modal-backdrop.open { display: grid; }
+    .modal { width: min(520px, 100%); background: #fff; border-radius: 12px; box-shadow: var(--shadow); }
+    .modal .card-head, .modal .card-body { padding: 18px 20px; }
+    .export-options { display: grid; gap: 9px; margin-top: 14px; }
+    .export-options label { display: flex; gap: 9px; align-items: center; border: 1px solid var(--line); padding: 10px; border-radius: 7px; font-weight: 500; }
+    .export-options input { width: auto; }
+    .hidden { display: none !important; }
+    .muted-box { color: var(--muted); background: var(--soft); padding: 14px; border-radius: 8px; font-size: .84rem; }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 74px minmax(0, 1fr); }
+      .sidebar { padding: 18px 10px; }
+      .brand > span:not(.brand-mark), .prototype-tag, .nav .label, .sidebar-note { display: none; }
+      .brand { justify-content: center; }
+      .nav button { justify-content: center; }
+      .review-shell { grid-template-columns: 1fr; }
+      .candidate-pane { border-right: 0; border-bottom: 1px solid var(--line); }
+      .candidate-list { max-height: 270px; }
+      .field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 680px) {
+      .app { display: block; }
+      .sidebar { position: static; height: auto; padding: 11px 14px; flex-direction: row; align-items: center; overflow-x: auto; }
+      .brand { flex: 0 0 auto; }
+      .nav { display: flex; }
+      .nav button { width: auto; white-space: nowrap; }
+      .nav .label { display: inline; }
+      .topbar { padding: 0 16px; }
+      main { padding: 20px 14px 40px; }
+      .page-head { align-items: stretch; flex-direction: column; }
+      .page-head .btn { width: 100%; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .field-grid { grid-template-columns: 1fr; }
+      .toolbar input, .toolbar select { width: 100%; }
+      .review-top { flex-direction: column; }
+      .score-box { width: 100%; }
+      .decision-bar { display: grid; grid-template-columns: repeat(3, 1fr); }
+      .decision-bar .btn { padding-inline: 8px; }
+      .top-actions span { display: none; }
+      table { min-width: 720px; }
+      .table-scroll { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 28 28"><circle cx="7" cy="14" r="3" fill="white"/><circle cx="21" cy="7" r="3" fill="white"/><circle cx="21" cy="21" r="3" fill="white"/><path d="M10 13l8-5M10 15l8 5" stroke="#93a3ff" stroke-width="2"/></svg>
+        </span>
+        <span>KG 审核工作台</span><span class="prototype-tag">原型</span>
+      </div>
+      <nav class="nav">
+        <button data-view="import"><span class="dot"></span><span class="label">数据集</span></button>
+        <button data-view="tasks" class="active"><span class="dot"></span><span class="label">补全任务</span></button>
+        <button data-view="review"><span class="dot"></span><span class="label">候选审核</span></button>
+        <button data-view="results"><span class="dot"></span><span class="label">审核结果</span></button>
+      </nav>
+      <div class="sidebar-note">本原型使用模拟数据，不连接真实模型或生产知识图谱。</div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <strong id="top-title">补全任务</strong>
+        <div class="top-actions"><span>模拟数据 · UBERT-RM v1</span><span class="avatar">蒋</span></div>
+      </header>
+      <main>
+        <section class="view" id="view-import">
+          <div class="page-head">
+            <div><h1>导入知识图谱数据</h1><p class="subtext">上传 CSV 文件并完成字段识别与格式校验。</p></div>
+            <button class="btn" id="download-sample">下载示例文件</button>
+          </div>
+          <div class="stepper"><div class="step active">1. 上传文件</div><div class="step">2. 字段识别</div><div class="step">3. 校验并导入</div></div>
+          <div class="card">
+            <div class="card-body">
+              <div class="dropzone" id="dropzone">
+                <div class="upload-icon">＋</div>
+                <h2>拖拽 CSV 文件到这里</h2>
+                <p class="subtext" style="margin:6px 0 14px">必填字段：head、relation、tail、confidence</p>
+                <button class="btn primary" id="choose-file">选择文件</button>
+                <input id="file-input" type="file" accept=".csv,text/csv" class="hidden">
+                <div class="file-name" id="file-name"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card hidden" id="mapping-card" style="margin-top:14px">
+            <div class="card-head"><h2>字段识别</h2><span class="subtext">系统已自动匹配，请确认</span></div>
+            <div class="card-body">
+              <div class="field-grid">
+                <label>头实体<select><option>head</option></select></label>
+                <label>关系<select><option>relation</option></select></label>
+                <label>尾实体<select><option>tail</option></select></label>
+                <label>置信值<select><option>confidence</option></select></label>
+                <label>来源（可选）<select><option>source</option><option>不映射</option></select></label>
+              </div>
+              <div id="validation-box" class="notice good" style="margin-top:16px">✓ 字段识别完成，可开始数据校验。</div>
+              <div class="actions"><button class="btn" id="show-invalid">演示错误数据</button><button class="btn primary" id="validate-data">开始校验</button></div>
+            </div>
+          </div>
+          <div class="card hidden" id="validated-card" style="margin-top:14px">
+            <div class="card-head"><h2>校验结果</h2><span class="status done">校验通过</span></div>
+            <div class="card-body">
+              <div class="stats"><div class="stat"><div class="label">实体</div><div class="value">15,000</div></div><div class="stat"><div class="label">关系</div><div class="value">36</div></div><div class="stat"><div class="label">事实</div><div class="value">241,158</div></div><div class="stat"><div class="label">重复记录</div><div class="value">12</div></div></div>
+              <div class="notice warn" style="margin-top:14px">⚠ 发现 12 条重复记录，将在导入时自动去重。</div>
+              <div class="actions"><button class="btn" id="reupload">重新上传</button><button class="btn primary" id="confirm-import">确认导入</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view active" id="view-tasks">
+          <div class="page-head">
+            <div><h1>补全任务</h1><p class="subtext">查看运行状态和审核进度，继续处理已有任务。</p></div>
+            <button class="btn primary" id="open-create">创建任务</button>
+          </div>
+          <div class="card">
+            <div class="toolbar"><select><option>全部状态</option><option>已完成</option><option>运行中</option><option>失败</option></select><select><option>全部数据集</option><option>CN15K</option><option>NL27K</option></select><input placeholder="搜索任务名称"></div>
+            <div class="table-scroll"><table><thead><tr><th>任务名称</th><th>数据集</th><th>状态</th><th>候选数</th><th>审核进度</th><th>操作</th></tr></thead><tbody id="task-body">
+              <tr><td><strong>原型用户测试题库</strong><div class="subtext">2026-10-03</div></td><td>模拟测试</td><td><span class="status done">已完成</span></td><td>21</td><td><div class="progress"><span id="task-progress" style="width:0%"></span></div><span class="subtext" id="task-progress-label">0 / 21</span></td><td><button class="btn small primary" data-go-review>开始审核</button></td></tr>
+              <tr><td><strong>NL27K 关系补全</strong><div class="subtext">2026-10-01 16:05</div></td><td>NL27K</td><td><span class="status running">运行中</span></td><td>--</td><td><div class="progress"><span style="width:68%"></span></div><span class="subtext">生成路径 68%</span></td><td><button class="btn small">查看进度</button></td></tr>
+              <tr><td><strong>格式兼容测试</strong><div class="subtext">2026-09-30 14:18</div></td><td>Test</td><td><span class="status failed">失败</span></td><td>--</td><td><span class="subtext">关系字段缺失</span></td><td><button class="btn small" id="retry-task">查看详情</button></td></tr>
+            </tbody></table></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-create">
+          <div class="page-head"><div><h1>创建补全任务</h1><p class="subtext">使用推荐配置启动一次候选生成任务。</p></div></div>
+          <div class="card form-card">
+            <div class="card-head"><h2>任务配置</h2><span class="status pending">推荐配置</span></div>
+            <div class="card-body form-stack">
+              <label>任务名称<input id="task-name" value="CN15K 尾实体补全测试"></label>
+              <label>选择数据集<select id="dataset-select"><option>CN15K / 15,000 实体 / 36 关系 / 241,158 事实</option><option>NL27K / 27,221 实体 / 404 关系 / 175,412 事实</option></select></label>
+              <div><h3>预测目标</h3><label class="radio-card"><input type="radio" name="target" checked>给定头实体和关系，预测候选尾实体</label><label class="radio-card" style="margin-top:8px"><input type="radio" name="target">给定头实体和尾实体，预测潜在关系</label></div>
+              <label>每个查询生成候选数<select id="candidate-count"><option>10</option><option>20</option><option>50</option></select><span class="subtext">候选越多，后续人工审核量越大。</span></label>
+              <div class="summary-box"><span>模型：<strong>UBERT-RM v1</strong></span><span>输出：<strong>评分＋路径</strong></span><span>默认路径：<strong>3 条</strong></span></div>
+              <div class="actions"><button class="btn" data-view-button="tasks">取消</button><button class="btn primary" id="create-task">创建并开始运行</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-review">
+          <div class="page-head">
+            <div><h1>候选审核</h1><p class="subtext"><strong>原型用户测试题库</strong> · 已审核 <span id="review-count">0</span>/<span id="review-total">21</span></p></div>
+            <button class="btn" data-view-button="results">查看审核结果</button>
+          </div>
+          <div class="card review-shell">
+            <div class="candidate-pane">
+              <div class="toolbar"><select id="status-filter"><option value="all">全部状态</option><option value="unreviewed">未审核</option><option value="accepted">已接受</option><option value="rejected">已驳回</option><option value="deferred">暂缓</option></select><select id="relation-filter"><option value="all">全部关系</option><option value="位于">位于</option><option value="属于">属于</option><option value="相关于">相关于</option><option value="创建者">创建者</option></select><input id="candidate-search" placeholder="搜索实体"></div>
+              <div class="candidate-list" id="candidate-list"></div>
+            </div>
+            <div class="review-pane" id="review-pane"></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-results">
+          <div class="page-head"><div><h1>审核结果</h1><p class="subtext">检查状态分布，并导出结构化审核记录。</p></div><button class="btn primary" id="open-export">导出结果</button></div>
+          <div class="stats result-stats" id="result-stats"></div>
+          <div class="card" style="margin-top:14px">
+            <div class="toolbar"><select id="result-filter"><option value="all">全部状态</option><option value="accepted">已接受</option><option value="rejected">已驳回</option><option value="deferred">暂缓</option><option value="unreviewed">未审核</option></select><input id="result-search" placeholder="搜索实体"></div>
+            <div class="table-scroll"><table><thead><tr><th>候选事实</th><th>评分</th><th>状态</th><th>原因/备注</th><th>路径</th></tr></thead><tbody id="result-body"></tbody></table></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><span id="toast-text">已保存</span><button id="undo-button">撤销</button></div>
+  <div class="modal-backdrop" id="export-modal" role="dialog" aria-modal="true" aria-labelledby="export-title">
+    <div class="modal">
+      <div class="card-head"><div><h2 id="export-title">导出审核结果</h2><p class="subtext">请选择需要导出的记录范围。</p></div><button class="btn ghost" id="close-export" aria-label="关闭">×</button></div>
+      <div class="card-body">
+        <div class="export-options">
+          <label><input type="radio" name="export" value="accepted" checked>仅已接受候选</label>
+          <label><input type="radio" name="export" value="reviewed">全部已审核候选</label>
+          <label><input type="radio" name="export" value="all">全部候选</label>
+        </div>
+        <div class="muted-box" style="margin-top:14px">导出格式：CSV<br>字段：question_id、mode、head、relation、tail、model_score、review_status、review_reason、review_note</div>
+        <div class="actions"><button class="btn" id="cancel-export">取消</button><button class="btn primary" id="confirm-export">确认导出</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const views = { import: '数据集', tasks: '补全任务', create: '创建任务', review: '候选审核', results: '审核结果' };
+    // 参与者页面只保存题目、模拟评分和路径，不包含参考答案或测试目的。
+    const candidates = [
+      {id:1, questionId:'练习01', mode:'practice', head:'银川', relation:'位于', tail:'宁夏', score:.923, status:'unreviewed', note:'', reason:'', paths:[['银川','宁夏首府','宁夏',.90]]},
+      {id:2, questionId:'练习02', mode:'practice', head:'CN15K', relation:'属于', tail:'医学数据集', score:.772, status:'unreviewed', note:'', reason:'', paths:[]},
+      {id:3, questionId:'练习03', mode:'practice', head:'UBERT-RM', relation:'已经部署于', tail:'企业生产系统', score:.806, status:'unreviewed', note:'', reason:'', paths:[['UBERT-RM','实现','论文模型',.78]]},
+      {id:4, questionId:'正式01', mode:'formal', head:'ConceptNet', relation:'属于', tail:'常识知识图谱', score:.891, status:'unreviewed', note:'', reason:'', paths:[['ConceptNet','用于表示','常识知识',.87]]},
+      {id:5, questionId:'正式02', mode:'formal', head:'NELL', relation:'来源于', tail:'网页信息抽取', score:.847, status:'unreviewed', note:'', reason:'', paths:[['NELL','从网页持续抽取','结构化知识',.82]]},
+      {id:6, questionId:'正式03', mode:'formal', head:'BERT', relation:'开发机构', tail:'Google', score:.756, status:'unreviewed', note:'', reason:'', paths:[['BERT','由研究团队提出','Google',.74]]},
+      {id:7, questionId:'正式04', mode:'formal', head:'CN15K', relation:'来源于', tail:'ConceptNet', score:.438, status:'unreviewed', note:'', reason:'', paths:[['CN15K','由常识图谱构建','ConceptNet',.81]]},
+      {id:8, questionId:'正式05', mode:'formal', head:'NL27K', relation:'来源于', tail:'NELL', score:.491, status:'unreviewed', note:'', reason:'', paths:[['NL27K','数据来源','NELL',.79]]},
+      {id:9, questionId:'正式06', mode:'formal', head:'知识图谱补全', relation:'相关任务', tail:'链接预测', score:.526, status:'unreviewed', note:'', reason:'', paths:[['知识图谱补全','预测缺失实体','链接预测',.71]]},
+      {id:10, questionId:'正式07', mode:'formal', head:'CN15K', relation:'来源于', tail:'NELL', score:.918, status:'unreviewed', note:'', reason:'', paths:[['CN15K','属于','不确定知识图谱数据集',.88],['NELL','属于','不确定知识图谱',.86]]},
+      {id:11, questionId:'正式08', mode:'formal', head:'NL27K', relation:'来源于', tail:'ConceptNet', score:.887, status:'unreviewed', note:'', reason:'', paths:[['NL27K','用于','知识图谱实验',.84],['ConceptNet','属于','知识图谱',.83]]},
+      {id:12, questionId:'正式09', mode:'formal', head:'BERT', relation:'开发机构', tail:'OpenAI', score:.863, status:'unreviewed', note:'', reason:'', paths:[['BERT','属于','人工智能模型',.85],['OpenAI','研究','人工智能',.82]]},
+      {id:13, questionId:'正式10', mode:'formal', head:'银川', relation:'位于', tail:'甘肃', score:.821, status:'unreviewed', note:'', reason:'', paths:[['银川','位于','中国西北地区',.86],['甘肃','位于','中国西北地区',.84]]},
+      {id:14, questionId:'正式11', mode:'formal', head:'ConceptNet', relation:'属于', tail:'金融风控数据集', score:.734, status:'unreviewed', note:'', reason:'', paths:[['ConceptNet','可用于','人工智能应用',.77],['金融风控','使用','人工智能',.72]]},
+      {id:15, questionId:'正式12', mode:'formal', head:'UBERT-RM', relation:'用于', tail:'图像分割', score:.701, status:'unreviewed', note:'', reason:'', paths:[['UBERT-RM','使用','神经网络',.75],['图像分割','使用','神经网络',.73]]},
+      {id:16, questionId:'正式13', mode:'formal', head:'宁夏大学', relation:'位于', tail:'银川', score:.684, status:'unreviewed', note:'', reason:'', paths:[]},
+      {id:17, questionId:'正式14', mode:'formal', head:'CN15K', relation:'包含关系数量', tail:'36', score:.618, status:'unreviewed', note:'', reason:'', paths:[]},
+      {id:18, questionId:'正式15', mode:'formal', head:'NL27K', relation:'包含实体数量', tail:'15000', score:.673, status:'unreviewed', note:'', reason:'', paths:[]},
+      {id:19, questionId:'正式16', mode:'formal', head:'UBERT-RM', relation:'适用于', tail:'医疗知识图谱生产系统', score:.882, status:'unreviewed', note:'', reason:'', paths:[['规则推理','适用于','医疗领域',.81],['UBERT-RM','支持','规则推理',.84]]},
+      {id:20, questionId:'正式17', mode:'formal', head:'路径跳数4', relation:'一定优于', tail:'路径跳数3', score:.791, status:'unreviewed', note:'', reason:'', paths:[['CN15K 4跳','MRR高于','CN15K 3跳',.79],['NL27K 4跳','MRR高于','NL27K 3跳',.77]]},
+      {id:21, questionId:'正式18', mode:'formal', head:'子图跳数3', relation:'是', tail:'所有场景的最佳配置', score:.836, status:'unreviewed', note:'', reason:'', paths:[['NL27K 3跳','多项指标高于','NL27K 2跳',.84],['CN15K 2跳','多项指标高于','CN15K 3跳',.82]]}
+    ];
+    let currentId = 1;
+    let lastChange = null;
+    let toastTimer = null;
+
+    function navigate(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+      document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.view === name || (name === 'create' && b.dataset.view === 'tasks')));
+      document.getElementById('top-title').textContent = views[name];
+      if (name === 'review') { renderCandidates(); renderReview(); }
+      if (name === 'results') renderResults();
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+    document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => navigate(b.dataset.view)));
+    document.querySelectorAll('[data-view-button]').forEach(b => b.addEventListener('click', () => navigate(b.dataset.viewButton)));
+    document.querySelectorAll('[data-go-review]').forEach(b => b.addEventListener('click', () => navigate('review')));
+    document.getElementById('open-create').addEventListener('click', () => navigate('create'));
+
+    const fileInput = document.getElementById('file-input');
+    document.getElementById('choose-file').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => showFile(fileInput.files[0]?.name || 'cn15k_sample.csv'));
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+    dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('drag'); showFile(e.dataTransfer.files[0]?.name || 'cn15k_sample.csv'); });
+    function showFile(name) { document.getElementById('file-name').textContent = name; document.getElementById('mapping-card').classList.remove('hidden'); document.getElementById('validated-card').classList.add('hidden'); }
+    document.getElementById('validate-data').addEventListener('click', () => document.getElementById('validated-card').classList.remove('hidden'));
+    document.getElementById('show-invalid').addEventListener('click', () => { const el=document.getElementById('validation-box'); el.className='notice bad'; el.textContent='✕ 第 18、46、91 行的 confidence 超出 0–1，请修正后重新上传。'; });
+    document.getElementById('reupload').addEventListener('click', () => { fileInput.value=''; document.getElementById('file-name').textContent=''; document.getElementById('mapping-card').classList.add('hidden'); document.getElementById('validated-card').classList.add('hidden'); });
+    document.getElementById('confirm-import').addEventListener('click', () => { showToast('CN15K 数据集已导入', false); setTimeout(() => navigate('create'), 550); });
+    document.getElementById('download-sample').addEventListener('click', () => downloadText('kg_sample.csv','head,relation,tail,confidence,source\n银川,位于,宁夏,0.92,示例数据\n'));
+
+    document.getElementById('create-task').addEventListener('click', () => {
+      const name = document.getElementById('task-name').value.trim();
+      if (!name) { showToast('请填写任务名称', false); return; }
+      navigate('tasks'); showToast('任务已创建，正在生成候选', false);
+      const row = document.createElement('tr');
+      row.innerHTML = '<td><strong>'+escapeHtml(name)+'</strong><div class="subtext">刚刚创建</div></td><td>CN15K</td><td><span class="status running" id="new-task-status">运行中</span></td><td id="new-task-count">--</td><td><div class="progress"><span id="new-task-progress" style="width:25%"></span></div><span class="subtext" id="new-task-note">生成候选 25%</span></td><td><button class="btn small" id="new-task-action">查看进度</button></td>';
+      document.getElementById('task-body').prepend(row);
+      setTimeout(() => { document.getElementById('new-task-progress').style.width='100%'; document.getElementById('new-task-status').className='status done'; document.getElementById('new-task-status').textContent='已完成'; document.getElementById('new-task-count').textContent=String(candidates.length); document.getElementById('new-task-note').textContent='0 / '+candidates.length; const b=document.getElementById('new-task-action'); b.textContent='开始审核'; b.className='btn small primary'; b.addEventListener('click',()=>navigate('review')); }, 1400);
+    });
+    document.getElementById('retry-task').addEventListener('click', () => showToast('失败原因：CSV 中缺少 relation 字段', false));
+
+    const statusLabel = {unreviewed:'未审核',accepted:'已接受',rejected:'已驳回',deferred:'暂缓'};
+    function statusClass(s) { return s === 'unreviewed' ? 'pending' : s; }
+    function visibleCandidates() {
+      const sf=document.getElementById('status-filter').value, rf=document.getElementById('relation-filter').value, q=document.getElementById('candidate-search').value.trim().toLowerCase();
+      return candidates.filter(c => (sf==='all'||c.status===sf) && (rf==='all'||c.relation===rf) && (!q||(c.head+c.tail+c.relation).toLowerCase().includes(q)));
+    }
+    function renderCandidates() {
+      const list=document.getElementById('candidate-list'), items=visibleCandidates();
+      if (!items.some(c=>c.id===currentId) && items.length) currentId=items[0].id;
+      list.innerHTML = items.length ? items.map(c=>'<button class="candidate-item '+(c.id===currentId?'active':'')+'" data-id="'+c.id+'"><div class="candidate-triplet">'+escapeHtml(c.questionId)+' · '+escapeHtml(c.head)+' — '+escapeHtml(c.relation)+' — '+escapeHtml(c.tail)+'</div><div class="candidate-meta"><span class="score">'+c.score.toFixed(3)+'</span><span class="status '+statusClass(c.status)+'">'+statusLabel[c.status]+'</span><span>'+c.paths.length+' 条路径</span></div></button>').join('') : '<div class="empty-path" style="margin:16px">没有符合当前条件的候选</div>';
+      list.querySelectorAll('[data-id]').forEach(b=>b.addEventListener('click',()=>{currentId=Number(b.dataset.id);renderCandidates();renderReview();}));
+      updateCounts();
+    }
+    function renderReview() {
+      const c=candidates.find(x=>x.id===currentId), pane=document.getElementById('review-pane'); if(!c){pane.innerHTML='<div class="empty-path">请选择一条候选</div>';return;}
+      const pathHtml=c.paths.length?'<div class="path-list">'+c.paths.slice(0,3).map((p,i)=>'<div class="path-card"><button class="path-main"><span><strong>路径 '+(i+1)+'</strong><br><span class="path-line">'+escapeHtml(p[0])+' → '+escapeHtml(p[1])+' → '+escapeHtml(p[2])+'</span></span><span class="score">'+p[3].toFixed(2)+'</span></button><div class="path-detail">关系方向和边置信信息已展开。该路径仅作为辅助证据，不代表候选事实已经成立。</div></div>').join('')+'</div>':'<div class="empty-path"><strong>当前候选暂无可用路径证据</strong><p style="margin-top:7px">你仍可结合模型评分、邻域和来源信息作出判断。</p><button class="btn small" style="margin-top:12px" id="view-neighbors">查看邻域信息</button></div>';
+      pane.innerHTML='<div class="review-top"><div><span class="subtext">候选事实</span><div class="triplet"><span class="entity">'+escapeHtml(c.head)+'</span><span>→</span><span class="relation">'+escapeHtml(c.relation)+'</span><span>→</span><span class="entity">'+escapeHtml(c.tail)+'</span></div></div><div class="score-box"><span class="subtext">模型置信评分</span><div class="big">'+c.score.toFixed(3)+'</div></div></div><div class="explain-note">模型评分表示候选事实的相对可信程度，不等同于事实正确概率，最终结果需要人工确认。</div><h3>关键路径</h3>'+pathHtml+'<div class="review-form"><label>审核备注<textarea id="review-note" placeholder="可填写判断依据或待核实内容">'+escapeHtml(c.note)+'</textarea></label><div class="decision-bar"><div class="reject-wrap"><button class="btn danger" id="reject-button">驳回</button><div class="reject-menu" id="reject-menu">'+['事实错误','关系错误','实体错误','证据不足','重复事实','其他'].map(x=>'<button data-reason="'+x+'">'+x+'</button>').join('')+'</div></div><button class="btn" id="defer-button">暂缓</button><button class="btn primary" id="accept-button">接受</button></div></div>';
+      pane.querySelectorAll('.path-main').forEach(b=>b.addEventListener('click',()=>b.parentElement.classList.toggle('open')));
+      document.getElementById('reject-button').addEventListener('click',()=>document.getElementById('reject-menu').classList.toggle('open'));
+      document.querySelectorAll('[data-reason]').forEach(b=>b.addEventListener('click',()=>applyDecision('rejected',b.dataset.reason)));
+      document.getElementById('defer-button').addEventListener('click',()=>applyDecision('deferred',''));
+      document.getElementById('accept-button').addEventListener('click',()=>applyDecision('accepted',''));
+      document.getElementById('review-note').addEventListener('change',e=>{c.note=e.target.value;});
+      document.getElementById('view-neighbors')?.addEventListener('click',()=>showToast('邻域摘要：该实体有 4 条已有关系，暂无直接连接路径',false));
+    }
+    function applyDecision(status, reason) {
+      const c=candidates.find(x=>x.id===currentId); lastChange={id:c.id,status:c.status,reason:c.reason,note:c.note};
+      c.note=document.getElementById('review-note').value.trim(); c.status=status; c.reason=reason;
+      showToast('已标记为'+statusLabel[status],true); updateCounts();
+      const next=candidates.find(x=>x.status==='unreviewed'&&x.id!==c.id); if(next) currentId=next.id;
+      renderCandidates(); renderReview();
+    }
+    ['status-filter','relation-filter'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{renderCandidates();renderReview();}));
+    document.getElementById('candidate-search').addEventListener('input',()=>{renderCandidates();renderReview();});
+    function updateCounts(){const reviewed=candidates.filter(c=>c.status!=='unreviewed').length;document.getElementById('review-count').textContent=reviewed;document.getElementById('review-total').textContent=candidates.length;document.getElementById('task-progress').style.width=(reviewed/candidates.length*100)+'%';document.getElementById('task-progress-label').textContent=reviewed+' / '+candidates.length;}
+
+    function resultCounts(){return {all:candidates.length,accepted:candidates.filter(c=>c.status==='accepted').length,rejected:candidates.filter(c=>c.status==='rejected').length,deferred:candidates.filter(c=>c.status==='deferred').length,unreviewed:candidates.filter(c=>c.status==='unreviewed').length};}
+    function renderResults(){
+      const ct=resultCounts(), stats=document.getElementById('result-stats');
+      stats.innerHTML=[['all','全部候选',ct.all],['accepted','已接受',ct.accepted],['rejected','已驳回',ct.rejected],['deferred','暂缓',ct.deferred]].map(x=>'<div class="stat" data-result-status="'+x[0]+'"><div class="label">'+x[1]+'</div><div class="value">'+x[2]+'</div></div>').join('');
+      stats.querySelectorAll('[data-result-status]').forEach(el=>el.addEventListener('click',()=>{document.getElementById('result-filter').value=el.dataset.resultStatus;renderResultTable();})); renderResultTable();
+    }
+    function renderResultTable(){const f=document.getElementById('result-filter').value,q=document.getElementById('result-search').value.trim().toLowerCase(), rows=candidates.filter(c=>(f==='all'||c.status===f)&&(!q||(c.head+c.relation+c.tail).toLowerCase().includes(q)));document.getElementById('result-body').innerHTML=rows.map(c=>'<tr><td><strong>'+escapeHtml(c.head)+' — '+escapeHtml(c.relation)+' — '+escapeHtml(c.tail)+'</strong></td><td class="score">'+c.score.toFixed(3)+'</td><td><span class="status '+statusClass(c.status)+'">'+statusLabel[c.status]+'</span></td><td>'+(escapeHtml(c.reason||c.note)||'--')+'</td><td>'+c.paths.length+' 条</td></tr>').join('')||'<tr><td colspan="5" class="subtext">没有符合条件的记录</td></tr>';}
+    document.getElementById('result-filter').addEventListener('change',renderResultTable); document.getElementById('result-search').addEventListener('input',renderResultTable);
+    const exportModal=document.getElementById('export-modal');
+    document.getElementById('open-export').addEventListener('click',()=>exportModal.classList.add('open')); ['close-export','cancel-export'].forEach(id=>document.getElementById(id).addEventListener('click',()=>exportModal.classList.remove('open')));
+    document.getElementById('confirm-export').addEventListener('click',()=>{const scope=document.querySelector('input[name="export"]:checked').value;exportCsv(scope);exportModal.classList.remove('open');});
+    function exportCsv(scope){let rows=candidates;if(scope==='accepted')rows=rows.filter(c=>c.status==='accepted');if(scope==='reviewed')rows=rows.filter(c=>c.status!=='unreviewed');const header='question_id,mode,head,relation,tail,model_score,review_status,review_reason,review_note\n';const csv=header+rows.map(c=>[c.questionId,c.mode,c.head,c.relation,c.tail,c.score,c.status,c.reason,c.note].map(csvCell).join(',')).join('\n');downloadText('kg_review_results.csv','\ufeff'+csv);showToast('已导出 '+rows.length+' 条审核记录',false);}
+    function csvCell(v){return '"'+String(v??'').replaceAll('"','""')+'"';}
+    function downloadText(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+    function showToast(text,undo){clearTimeout(toastTimer);document.getElementById('toast-text').textContent=text;document.getElementById('undo-button').style.display=undo?'inline':'none';document.getElementById('toast').classList.add('show');toastTimer=setTimeout(()=>document.getElementById('toast').classList.remove('show'),3500);}
+    document.getElementById('undo-button').addEventListener('click',()=>{if(!lastChange)return;const c=candidates.find(x=>x.id===lastChange.id);Object.assign(c,{status:lastChange.status,reason:lastChange.reason,note:lastChange.note});currentId=c.id;lastChange=null;document.getElementById('toast').classList.remove('show');renderCandidates();renderReview();showToast('已撤销上一次审核操作',false);});
+    function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));}
+
+    function registerWebMcp(){
+      const ctx=document.modelContext;if(!ctx?.registerTool)return;
+      const register=(tool)=>{try{Promise.resolve(ctx.registerTool(tool)).catch(()=>{});}catch(e){}}
+      register({name:'navigate_to_section',title:'打开工作台页面',description:'打开数据导入、补全任务、候选审核或审核结果页面。',inputSchema:{type:'object',properties:{section:{type:'string',enum:['import','tasks','review','results']}},required:['section'],additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute(input){if(!input||!views[input.section]||input.section==='create')throw new Error('无效页面');navigate(input.section);return{section:input.section};}});
+      register({name:'review_candidate',title:'审核候选事实',description:'将指定候选标记为接受、驳回或暂缓，并同步更新可见审核状态。',inputSchema:{type:'object',properties:{candidateId:{type:'integer',minimum:1},decision:{type:'string',enum:['accepted','rejected','deferred']},reason:{type:'string'}},required:['candidateId','decision'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute(input){const c=candidates.find(x=>x.id===input?.candidateId);if(!c)throw new Error('候选不存在');if(input.decision==='rejected'&&!input.reason)throw new Error('驳回时需要原因');c.status=input.decision;c.reason=input.reason||'';currentId=c.id;renderCandidates();renderReview();updateCounts();return{id:c.id,status:c.status};}});
+    }
+    registerWebMcp(); updateCounts(); renderCandidates(); renderReview();
+  </script>
+</body>
+</html>
